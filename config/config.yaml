@@ -1,0 +1,114 @@
+# A股量化深度学习系统配置文件
+
+# 数据配置
+data:
+  raw_data_path: "data/raw"
+  processed_data_path: "data/processed"
+  database_path: "data/stock_data.db"
+  
+  # 股票列表 (示例，可扩展)
+  stock_list:
+    - "000001"  # 平安银行
+    - "600519"  # 贵州茅台
+    - "000858"  # 五粮液
+    - "600036"  # 招商银行
+    - "601318"  # 中国平安
+  
+  # 数据更新配置
+  update_schedule:
+    enabled: true
+    time: "15:30"  # 每天15:30更新
+  
+  # 历史数据范围
+  start_date: "2020-01-01"
+  end_date: null  # null表示当前日期
+
+# 特征工程配置
+features:
+  # 时间窗口
+  window_size: 60  # 使用过去60天的数据
+  
+  # 技术指标参数
+  technical_indicators:
+    ma_periods: [5, 10, 20, 30, 60]
+    ema_periods: [12, 26]
+    rsi_period: 14
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+    kdj_period: 9
+    bollinger_period: 20
+    bollinger_std: 2
+    atr_period: 14
+  
+  # 特征标准化
+  normalization: "minmax"  # minmax 或 standard
+
+# 模型配置
+model:
+  type: "LSTM"
+  
+  # LSTM参数
+  lstm:
+    input_size: null  # 自动计算
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+    bidirectional: false
+  
+  # 预测目标
+  prediction:
+    target: "return"  # return (收益率) 或 price (价格)
+    horizon: 5  # 预测未来5天
+  
+  # 训练参数
+  training:
+    batch_size: 32
+    epochs: 100
+    learning_rate: 0.001
+    weight_decay: 0.0001
+    early_stopping_patience: 10
+    validation_split: 0.2
+    test_split: 0.1
+  
+  # 模型保存
+  model_save_path: "data/models"
+  checkpoint_interval: 5
+
+# API配置
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  workers: 4
+  
+  # CORS配置
+  cors:
+    enabled: true
+    origins: ["*"]
+
+# 日志配置
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_dir: "logs"
+  log_file: "quant_system.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# 回测配置
+backtest:
+  initial_capital: 100000  # 初始资金10万
+  commission_rate: 0.0003  # 手续费率0.03%
+  slippage: 0.001  # 滑点0.1%
+  
+  # 交易策略
+  strategy:
+    buy_threshold: 0.02  # 预测收益率>2%时买入
+    sell_threshold: -0.01  # 预测收益率<-1%时卖出
+    max_position: 0.3  # 单只股票最大仓位30%
+
+# 系统配置
+system:
+  random_seed: 42
+  device: "cuda"  # cuda 或 cpu
+  num_workers: 4
