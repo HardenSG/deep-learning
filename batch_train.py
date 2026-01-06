@@ -16,7 +16,7 @@ setup_logger(
 )
 logger = get_logger(__name__)
 
-PYTHON_PATH = "F:\\sofaWare\\PYTHON\\python.exe"
+PYTHON_PATH = sys.executable
 
 STOCK_CODES = [
     "601698",

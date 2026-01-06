@@ -95,8 +95,41 @@ class Database:
     
     def save_stock_daily(self, stock_code: str, daily_data: pd.DataFrame) -> None:
         try:
+            daily_data = daily_data.copy()
             daily_data["stock_code"] = stock_code
-            daily_data.to_sql("stock_daily", self.engine, if_exists="append", index=False)
+            
+            if 'trade_date' in daily_data.columns:
+                daily_data['trade_date'] = pd.to_datetime(daily_data['trade_date']).dt.strftime('%Y-%m-%d')
+            
+            with self.engine.connect() as conn:
+                for _, row in daily_data.iterrows():
+                    trade_date = row.get('trade_date')
+                    if isinstance(trade_date, pd.Timestamp):
+                        trade_date = trade_date.strftime('%Y-%m-%d')
+                    
+                    conn.execute(text("""
+                        INSERT OR REPLACE INTO stock_daily 
+                        (stock_code, trade_date, open, high, low, close, volume, amount, 
+                         amplitude, change_pct, change_amount, turnover_rate)
+                        VALUES 
+                        (:stock_code, :trade_date, :open, :high, :low, :close, :volume, :amount,
+                         :amplitude, :change_pct, :change_amount, :turnover_rate)
+                    """), {
+                        'stock_code': str(row.get('stock_code')),
+                        'trade_date': str(trade_date),
+                        'open': float(row.get('open')) if pd.notna(row.get('open')) else None,
+                        'high': float(row.get('high')) if pd.notna(row.get('high')) else None,
+                        'low': float(row.get('low')) if pd.notna(row.get('low')) else None,
+                        'close': float(row.get('close')) if pd.notna(row.get('close')) else None,
+                        'volume': float(row.get('volume')) if pd.notna(row.get('volume')) else None,
+                        'amount': float(row.get('amount')) if pd.notna(row.get('amount')) else None,
+                        'amplitude': float(row.get('amplitude')) if pd.notna(row.get('amplitude')) else None,
+                        'change_pct': float(row.get('change_pct')) if pd.notna(row.get('change_pct')) else None,
+                        'change_amount': float(row.get('change_amount')) if pd.notna(row.get('change_amount')) else None,
+                        'turnover_rate': float(row.get('turnover_rate')) if pd.notna(row.get('turnover_rate')) else None
+                    })
+                conn.commit()
+            
             logger.info(f"保存 {stock_code} 日线数据: {len(daily_data)} 条记录")
         except Exception as e:
             logger.error(f"保存 {stock_code} 日线数据失败: {e}")

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(where:*)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" --version)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_etf_support.py)",
+      "Bash(findstr:*)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c:*)"
+    ]
+  }
+}

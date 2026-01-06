@@ -1,0 +1,114 @@
+[32m2026-01-07 01:25:21.091[0m | [1mINFO    [0m | [36msrc.models.improved_predictor[0m:[36m__init__[0m:[36m33[0m - [1m¸Ä½ø°æÔ¤²âÆ÷³õÊ¼»¯Íê³É£¬Éè±¸: cpu[0m
+Traceback (most recent call last):
+  File "C:\Users\yandeqiang\Desktop\¸öÈËÏîÄ¿\½ğÈÚÁ¿»¯\test_improved_predictor.py", line 217, in <module>
+    test_improved_predictor()
+  File "C:\Users\yandeqiang\Desktop\¸öÈËÏîÄ¿\½ğÈÚÁ¿»¯\test_improved_predictor.py", line 154, in test_improved_predictor
+    json.dump(result, f, indent=2, ensure_ascii=False)
+  File "F:\sofaWare\PYTHON\lib\json\__init__.py", line 179, in dump
+    for chunk in iterable:
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 431, in _iterencode
+    yield from _iterencode_dict(o, _current_indent_level)
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 405, in _iterencode_dict
+    yield from chunks
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 438, in _iterencode
+    o = _default(o)
+  File "F:\sofaWare\PYTHON\lib\json\encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type bool is not JSON serializable
+
+================================================================================
+IMPROVED PREDICTOR TEST SUITE
+================================================================================
+
+================================================================================
+Testing Improved Predictor
+================================================================================
+
+[TEST] Predicting for 600519
+[TEST] Current Price: 1580.50
+
+[INFO] Running comprehensive prediction with 50 Monte Carlo simulations...
+
+================================================================================
+PREDICTION RESULT
+================================================================================
+
+[METADATA]
+  Stock Code: 600519
+  Prediction Time: 2026-01-07T01:25:21.130027
+  Valid Until: 2026-01-12T01:25:21.130027
+  N Simulations: 50
+
+[DATA QUALITY]
+  Score: 100/100 (ÓÅ)
+  Has NaN: False
+  Has Inf: False
+
+[PRICE PREDICTION]
+  Current:   1580.50
+  Predicted: 1581.12
+  Change:    +0.62 (+0.04%)
+
+[PROBABILITY]
+  Direction: ÉÏÕÇ
+  Up:        56.0%
+  Down:      44.0%
+  Large Up:  0.0% (>5%)
+  Large Down:0.0% (<-5%)
+
+[UNCERTAINTY]
+  Mean Return:   +0.04%
+  Median Return: +0.16%
+  Std Return:    1.78%
+  Confidence Intervals:
+    5%:  -3.82%
+    25%: -0.83%
+    75%: +1.44%
+    95%: +2.23%
+
+[RISK METRICS]
+  Volatility:
+    Daily:      0.0178
+    Annualized: 12.66%
+    Level:      µÍ
+  Value at Risk (95%):
+    95%ÖÃĞÅ¶ÈÏÂ×î´óËğÊ§Ô¼3.82%
+    Amount: -60.33
+  Ratios:
+    Sharpe Ratio:       -0.01
+    Reward/Risk Ratio:  0.02
+
+[TRADING SIGNALS]
+  Action: ¹ÛÍû
+  Reason: ÕÇµø¸ÅÂÊ½Ó½ü£¬½¨ÒéµÈ´ı¸üÃ÷È·ĞÅºÅ
+  Confidence: ¸ß
+
+  Position:
+    Suggested: 0%
+
+  Stop Loss:
+    Price: 1533.09 (-3.0%)
+
+  Take Profit:
+    Price: 1637.49 (3.6%)
+
+  Risk Assessment:
+    Overall Risk: µÍ
+    Risk Score:   2/6
+
+[DISCLAIMER]
+  ±¾Ô¤²â½ö¹©²Î¿¼£¬²»¹¹³ÉÍ¶×Ê½¨Òé¡£¹ÉÊĞÓĞ·çÏÕ£¬Í¶×ÊĞè½÷É÷¡£
+  Limitations:
+    - Ä£ĞÍ»ùÓÚÀúÊ·Êı¾İÑµÁ·£¬ÎŞ·¨Ô¤²âÍ»·¢ÊÂ¼ş
+    - Ô¤²â×¼È·ĞÔÊÜÊĞ³¡»·¾³Ó°Ïì
+    - ½¨Òé½áºÏ»ù±¾Ãæ·ÖÎö×ÛºÏÅĞ¶Ï
+
+================================================================================
+[OK] Improved Predictor Test Passed!
+================================================================================
+
+[FAIL] Test failed: Object of type bool is not JSON serializable

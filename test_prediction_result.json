@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "stock_code": "600519",
+    "prediction_time": "2026-01-07T01:26:08.488882",
+    "prediction_valid_until": "2026-01-12T01:26:08.488882",
+    "model_version": "unknown",
+    "model_val_loss": null,
+    "n_simulations": 50,
+    "data_quality": {
+      "score": 100,
+      "level": "优",
+      "has_nan": 

@@ -56,24 +56,21 @@ def main():
     logger.info(f"数据加载完成: {len(df)} 条记录")
     
     feature_builder = FeatureBuilder(config.features)
-    
+
     logger.info("准备训练数据...")
-    X, y, feature_columns = feature_builder.prepare_training_data(
+
+    # 使用新的方法，避免数据泄露
+    X_train, y_train, X_val, y_val, X_test, y_test, feature_columns = feature_builder.prepare_train_val_test_data(
         df,
         target_column="close",
-        prediction_horizon=config.model.get("prediction", {}).get("horizon", 5)
+        prediction_horizon=config.model.get("prediction", {}).get("horizon", 5),
+        train_ratio=1 - config.model.get("training", {}).get("validation_split", 0.2) - config.model.get("training", {}).get("test_split", 0.1),
+        val_ratio=config.model.get("training", {}).get("validation_split", 0.2)
     )
-    
+
     logger.info(f"特征数量: {len(feature_columns)}")
-    
-    train_ratio = 1 - config.model.get("training", {}).get("validation_split", 0.2) - config.model.get("training", {}).get("test_split", 0.1)
-    val_ratio = config.model.get("training", {}).get("validation_split", 0.2)
-    
-    X_train, y_train, X_val, y_val, X_test, y_test = feature_builder.split_data(
-        X, y, train_ratio, val_ratio
-    )
-    
-    input_size = X.shape[2]
+
+    input_size = X_train.shape[2]
     
     logger.info("初始化模型...")
     model = LSTMModel(
@@ -85,12 +82,23 @@ def main():
     )
     
     logger.info(f"模型信息: {model.get_model_info()}")
-    
+
+    # 获取损失函数配置
+    loss_config = config.model.get("loss", {})
+    loss_type = loss_config.get("type", "hybrid")  # 默认使用hybrid
+    loss_alpha = loss_config.get("alpha", 1.0)
+    loss_beta = loss_config.get("beta", 0.5)
+    loss_gamma = loss_config.get("gamma", 0.3)
+
     trainer = ModelTrainer(
         model,
         device=config.system.get("device", "cuda"),
         learning_rate=config.model.get("training", {}).get("learning_rate", 0.001),
-        weight_decay=config.model.get("training", {}).get("weight_decay", 0.0001)
+        weight_decay=config.model.get("training", {}).get("weight_decay", 0.0001),
+        loss_type=loss_type,
+        loss_alpha=loss_alpha,
+        loss_beta=loss_beta,
+        loss_gamma=loss_gamma
     )
     
     model_save_path = Path(config.model.get("model_save_path", "data/models")) / f"{args.stock_code}_model.pth"
