@@ -16,6 +16,7 @@ class FeatureBuilder:
         self.window_size = config.get("window_size", 60)
         self.normalization = config.get("normalization", "minmax")
         self.scaler = None
+        self.y_scaler = None  # 目标值归一化
         self.feature_columns = None
         
         logger.info(f"特征构建器初始化: window_size={self.window_size}, normalization={self.normalization}")
@@ -149,6 +150,21 @@ class FeatureBuilder:
         df = self.build_features(df)
 
         exclude_columns = ["trade_date", "stock_code", "id", "created_at"]
+        
+        # 检查是否只使用平稳特征
+        if self.config.get("use_stationary", False):
+            logger.info("启用平稳性处理：移除价格相关的非平稳特征，仅保留收益率、差分和技术指标")
+            # 基础非平稳列
+            non_stationary_cols = ["open", "high", "low", "close", "adj_close", "volume"]
+            exclude_columns.extend(non_stationary_cols)
+            
+            # 移除价格相关的指标 (MA, EMA, BB等)
+            for col in df.columns:
+                if col.startswith("ma_") or col.startswith("ema_"):
+                    exclude_columns.append(col)
+                if col.startswith("bb_") and "width" not in col:  # 保留bb_width (相对值)
+                    exclude_columns.append(col)
+        
         feature_columns = [col for col in df.columns if col not in exclude_columns]
 
         self.feature_columns = feature_columns
@@ -310,6 +326,18 @@ class FeatureBuilder:
 
         return X_train, y_train, X_val, y_val, X_test, y_test, feature_columns
     
+    def inverse_transform_y(self, y: np.ndarray) -> np.ndarray:
+        """
+        将归一化的预测值还原为真实数值
+        """
+        if self.y_scaler is None:
+            return y
+        
+        # 确保输入维度正确
+        y_reshaped = y.reshape(-1, 1)
+        y_inv = self.y_scaler.inverse_transform(y_reshaped)
+        return y_inv.flatten()
+    
     def save_scaler(self, save_path: str) -> None:
         save_path = Path(save_path)
         save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,6 +345,7 @@ class FeatureBuilder:
         with open(save_path, "wb") as f:
             pickle.dump({
                 "scaler": self.scaler,
+                "y_scaler": self.y_scaler,
                 "feature_columns": self.feature_columns,
                 "window_size": self.window_size,
                 "normalization": self.normalization
@@ -328,6 +357,7 @@ class FeatureBuilder:
         with open(load_path, "rb") as f:
             data = pickle.load(f)
             self.scaler = data["scaler"]
+            self.y_scaler = data.get("y_scaler")
             self.feature_columns = data["feature_columns"]
             self.window_size = data["window_size"]
             self.normalization = data["normalization"]

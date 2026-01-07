@@ -119,6 +119,18 @@ class TechnicalIndicators:
         return df
     
     @staticmethod
+    def calculate_diff(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        计算一阶差分 (去非平稳性)
+        """
+        # 价格差分
+        df["close_diff"] = df["close"].diff()
+        # 成交量差分
+        if "volume" in df.columns:
+            df["volume_diff"] = df["volume"].diff()
+        return df
+    
+    @staticmethod
     def calculate_all_indicators(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         logger.info("开始计算技术指标...")
         
@@ -126,6 +138,7 @@ class TechnicalIndicators:
         
         tech_config = config.get("technical_indicators", {})
         
+        # 1. 计算基础指标 (MA, EMA等)
         df = TechnicalIndicators.calculate_ma(df, tech_config.get("ma_periods", [5, 10, 20, 30, 60]))
         df = TechnicalIndicators.calculate_ema(df, tech_config.get("ema_periods", [12, 26]))
         df = TechnicalIndicators.calculate_macd(
@@ -145,6 +158,9 @@ class TechnicalIndicators:
         df = TechnicalIndicators.calculate_obv(df)
         df = TechnicalIndicators.calculate_volume_ratio(df)
         df = TechnicalIndicators.calculate_price_change(df)
+        
+        # 2. 计算差分 (去非平稳性)
+        df = TechnicalIndicators.calculate_diff(df)
         
         logger.info(f"技术指标计算完成，共 {len(df.columns)} 个特征")
         

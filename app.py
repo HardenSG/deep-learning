@@ -22,6 +22,7 @@ sys.path.append(str(Path(__file__).parent))
 
 from src.utils.config import load_config
 from src.utils.database import Database
+from src.utils.random_utils import set_seed
 from src.data_collector.stock_data import StockDataCollector
 from src.data_collector.unified_collector import UnifiedDataCollector
 from src.feature_engineering.feature_builder import FeatureBuilder
@@ -251,6 +252,8 @@ elif page == "🤖 股票/ETF预测":
 
                         # 加载模型
                         input_size = X.shape[2]
+                        
+                        # 先尝试按当前配置初始化
                         model = LSTMModel(
                             input_size=input_size,
                             hidden_size=config.model.get("lstm", {}).get("hidden_size", 128),
@@ -259,7 +262,37 @@ elif page == "🤖 股票/ETF预测":
                         )
 
                         predictor = ImprovedPredictor(model, device="cpu")
-                        predictor.load_model(str(model_path))
+                        
+                        try:
+                            predictor.load_model(str(model_path))
+                        except RuntimeError as e:
+                            # 处理模型结构不匹配的问题（例如旧模型是2层，新配置是1层）
+                            if "Unexpected key(s) in state_dict" in str(e) or "size mismatch" in str(e):
+                                st.warning("检测到模型结构与当前配置不一致，正在尝试适配旧模型...")
+                                
+                                # 读取checkpoint获取原始模型参数
+                                checkpoint = torch.load(str(model_path), map_location="cpu")
+                                model_info = checkpoint.get("model_info", {})
+                                
+                                if model_info:
+                                    # 使用保存的模型参数重新初始化
+                                    model = LSTMModel(
+                                        input_size=model_info.get("input_size", input_size),
+                                        hidden_size=model_info.get("hidden_size", 128),
+                                        num_layers=model_info.get("num_layers", 2),
+                                        dropout=config.model.get("lstm", {}).get("dropout", 0.2), # Dropout不影响权重加载
+                                        bidirectional=model_info.get("bidirectional", False)
+                                    )
+                                    
+                                    # 重新加载
+                                    predictor = ImprovedPredictor(model, device="cpu")
+                                    predictor.load_model(str(model_path))
+                                    st.success("✅ 已成功适配并加载旧模型")
+                                else:
+                                    st.error("无法适配旧模型：缺少元数据。请重新训练模型。")
+                                    raise e
+                            else:
+                                raise e
 
                         # 预测
                         result = predictor.get_comprehensive_prediction(
@@ -424,11 +457,27 @@ elif page == "🏋️ 模型训练":
         with col1:
             epochs = st.slider("训练轮数", 10, 200, 50)
         with col2:
-            batch_size = st.slider("批次大小", 16, 128, 32)
+            batch_size = st.slider("批次大小", 4, 128, 64)
         with col3:
-            hidden_size = st.slider("隐藏层大小", 32, 256, 128)
+            learning_rate = st.number_input(
+                "学习率",
+                value=0.0001,
+                min_value=0.0001,
+                max_value=0.1,
+                step=0.0001,
+                format="%.4f"
+            )
+            
+        col4, col5 = st.columns(2)
+        with col4:
+            hidden_size = st.slider("隐藏层大小", 8, 256, 64)
+        with col5:
+            window_size = st.slider("窗口大小", 3, 20, 5, help="滑动窗口长度 (建议3-5天)")
+        
+        seed = st.number_input("随机种子", value=42, step=1)
 
     if train_button:
+        set_seed(seed)
         st.markdown("---")
         st.subheader("📋 训练日志")
 
@@ -481,6 +530,9 @@ elif page == "🏋️ 模型训练":
             status_text.text("🔧 步骤 3/5: 计算技术指标和特征...")
             progress_bar.progress(60)
 
+            # 更新配置
+            config.features["window_size"] = window_size
+            
             feature_builder = FeatureBuilder(config.features)
             X_train, y_train, X_val, y_val, X_test, y_test, features = \
                 feature_builder.prepare_train_val_test_data(df)
@@ -508,8 +560,8 @@ elif page == "🏋️ 模型训练":
             trainer = ModelTrainer(
                 model,
                 device="cpu",
-                learning_rate=0.001,
-                loss_type="hybrid",
+                learning_rate=learning_rate,
+                loss_type="mse",
                 loss_alpha=1.0,
                 loss_beta=0.5
             )
@@ -535,11 +587,11 @@ elif page == "🏋️ 模型训练":
             # 5. 评估和保存
             status_text.text("📊 步骤 5/5: 评估模型性能...")
 
-            metrics = trainer.evaluate(X_test, y_test)
-            add_log(f"测试集评估结果:")
+            metrics = trainer.evaluate(X_test, y_test, scaler=feature_builder.y_scaler)
+            add_log(f"测试集评估结果 (已还原真实数值):")
             add_log(f"  MSE: {metrics['mse']:.6f}")
+            add_log(f"  MAE: {metrics['mae']:.6f}")
             add_log(f"  RMSE: {metrics['rmse']:.6f}")
-            add_log(f"  方向准确率: {metrics['direction_accuracy']*100:.2f}%")
 
             # 保存 scaler
             scaler_path = Path("data/models") / f"{stock_code}_scaler.pkl"

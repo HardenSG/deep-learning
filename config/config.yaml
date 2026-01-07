@@ -26,7 +26,7 @@ data:
 # 特征工程配置
 features:
   # 时间窗口
-  window_size: 60  # 使用过去60天的数据
+  window_size: 5  # 使用过去5天的数据 (滑动窗口优化：3-5天)
   
   # 技术指标参数
   technical_indicators:
@@ -43,6 +43,9 @@ features:
   
   # 特征标准化
   normalization: "minmax"  # minmax 或 standard
+  
+  # 是否使用平稳特征 (去除非平稳的价格数据，仅保留收益率和差分)
+  use_stationary: true
 
 # 模型配置
 model:
@@ -51,27 +54,29 @@ model:
   # LSTM参数
   lstm:
     input_size: null  # 自动计算
-    hidden_size: 128
-    num_layers: 2
-    dropout: 0.2
+    hidden_size: 64  # 适配数值细节 (Doubao建议)
+    num_layers: 1    # 回归任务不用深
+    dropout: 0.1     # 低Dropout避免丢失细节
     bidirectional: false
   
   # 预测目标
   prediction:
-    target: "return"  # return (收益率) 或 price (价格)
+    target: "value_diff"  # 预测数值差 (今日股价 - 昨日股价)
     horizon: 5  # 预测未来5天
   
   # 训练参数
   training:
-    batch_size: 32
+    batch_size: 64  # 降低梯度噪声
     epochs: 100
-    learning_rate: 0.001
+    learning_rate: 0.0001  # 调小学习率，避免震荡
     weight_decay: 0.0001
-    early_stopping_patience: 10
+    early_stopping_patience: 5  # 避免过拟合噪声
     validation_split: 0.2
     test_split: 0.1
-  
-  # 模型保存
+    
+  # 损失函数
+  loss:
+    type: "mse"  # 回归任务使用MSE
   model_save_path: "data/models"
   checkpoint_interval: 5
 

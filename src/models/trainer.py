@@ -92,7 +92,7 @@ class ModelTrainer:
         """
         self.model.train()
         total_loss = 0.0
-        loss_components_sum = {"mse_loss": 0.0, "direction_loss": 0.0, "extreme_loss": 0.0}
+        loss_components_sum = {"mse_loss": 0.0, "direction_loss": 0.0, "extreme_loss": 0.0, "mae": 0.0}
         n_batches = 0
 
         for batch_X, batch_y in train_loader:
@@ -105,25 +105,32 @@ class ModelTrainer:
             loss = self.criterion(outputs.squeeze(), batch_y)
 
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)  # 从1.0增加到5.0
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=5.0)
             self.optimizer.step()
 
             total_loss += loss.item()
+            
+            # 计算并记录MAE
+            mae = torch.nn.functional.l1_loss(outputs.squeeze(), batch_y).item()
+            loss_components_sum["mae"] += mae
+            
             n_batches += 1
 
             # 如果使用混合损失，记录各个分量
             if self.loss_type in ["hybrid", "advanced"]:
                 components = self.criterion.get_components(outputs.squeeze(), batch_y)
-                for key in loss_components_sum:
+                for key in ["mse_loss", "direction_loss", "extreme_loss"]:
                     if key in components:
                         loss_components_sum[key] += components[key]
 
         avg_loss = total_loss / len(train_loader)
 
         # 计算平均损失分量
-        loss_components = None
-        if self.loss_type in ["hybrid", "advanced"]:
-            loss_components = {k: v / n_batches for k, v in loss_components_sum.items() if v > 0}
+        loss_components = {k: v / n_batches for k, v in loss_components_sum.items() if v > 0}
+        
+        # 即使是MSE模式，也返回MAE
+        if self.loss_type == "mse":
+             loss_components = {"mae": loss_components_sum["mae"] / n_batches}
 
         return avg_loss, loss_components
     
@@ -249,7 +256,7 @@ class ModelTrainer:
         
         return checkpoint
     
-    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict[str, float]:
+    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray, scaler=None) -> Dict[str, float]:
         test_dataset = TensorDataset(
             torch.FloatTensor(X_test),
             torch.FloatTensor(y_test)
@@ -269,6 +276,11 @@ class ModelTrainer:
         
         predictions = np.array(predictions)
         actuals = np.array(actuals)
+        
+        # 如果提供了scaler，还原数值
+        if scaler:
+            predictions = scaler.inverse_transform(predictions.reshape(-1, 1)).flatten()
+            actuals = scaler.inverse_transform(actuals.reshape(-1, 1)).flatten()
         
         mse = np.mean((predictions - actuals) ** 2)
         mae = np.mean(np.abs(predictions - actuals))

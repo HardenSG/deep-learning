@@ -33,7 +33,7 @@ def main():
     
     logger.info(f"开始训练股票 {args.stock_code} 的模型")
     
-    torch.manual_seed(config.system.get("random_seed", 42))
+    set_seed(config.system.get("random_seed", 42))
     
     db = Database(config.data.get("database_path", "data/stock_data.db"))
     
@@ -90,10 +90,13 @@ def main():
     loss_beta = loss_config.get("beta", 0.5)
     loss_gamma = loss_config.get("gamma", 0.3)
 
+    # 确定学习率：命令行参数 > 配置文件 > 默认值
+    lr = args.learning_rate if args.learning_rate is not None else config.model.get("training", {}).get("learning_rate", 0.001)
+
     trainer = ModelTrainer(
         model,
         device=config.system.get("device", "cuda"),
-        learning_rate=config.model.get("training", {}).get("learning_rate", 0.001),
+        learning_rate=lr,
         weight_decay=config.model.get("training", {}).get("weight_decay", 0.0001),
         loss_type=loss_type,
         loss_alpha=loss_alpha,
