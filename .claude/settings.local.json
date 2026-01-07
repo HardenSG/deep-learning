@@ -6,7 +6,28 @@
       "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" --version)",
       "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_etf_support.py)",
       "Bash(findstr:*)",
-      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c:*)"
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c:*)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_stock_codes.py)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_fund_support.py)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\":*)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; funcs = [name for name in dir\\(ak\\) if ''fund'' in name.lower\\(\\) and ''open'' in name.lower\\(\\)]; print\\(''开放式基金相关函数:''\\); print\\(''\\\\n''.join\\(sorted\\(funcs\\)\\)\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; help\\(ak.fund_open_fund_info_em\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_fund_api.py)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" srcdata_collectorunified_collector_v2.py)",
+      "Bash(del \"C:\\\\Users\\\\yandeqiang\\\\Desktop\\\\个人项目\\\\金融量化\\\\start_windows.bat\")",
+      "Bash(tree:*)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; funcs = [name for name in dir\\(ak\\) if ''fund_flow'' in name.lower\\(\\) or ''hsgt'' in name.lower\\(\\) or ''north'' in name.lower\\(\\)]; print\\(''\\\\n''.join\\(sorted\\(funcs\\)[:30]\\)\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; help\\(ak.stock_individual_fund_flow\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; help\\(ak.stock_hsgt_hist_em\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; help\\(ak.stock_news_em\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" test_multi_factor.py)",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; df = ak.stock_hsgt_hist_em\\(symbol=''北向资金''\\); print\\(''列名:'', list\\(df.columns\\)\\); print\\(''前2行:''\\); print\\(df.head\\(2\\)\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; df = ak.macro_china_cpi_yearly\\(\\); print\\(''列名:'', list\\(df.columns\\)\\); print\\(''前3行:''\\); print\\(df.head\\(3\\)\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"import akshare as ak; df = ak.macro_china_m2_yearly\\(\\); print\\(''列名:'', list\\(df.columns\\)\\); print\\(''前3行:''\\); print\\(df.head\\(3\\)\\)\")",
+      "Bash(\"F:\\\\sofaWare\\\\PYTHON\\\\python.exe\" -c \"\nimport sys\nsys.path.insert\\(0, ''.''\\)\nfrom src.data_collector.multi_factor_collector import MultiFactorCollector\n\ncollector = MultiFactorCollector\\(\\)\n\n# 快速测试各个新增接口\nprint\\(''='' * 50\\)\nprint\\(''新增宏观指标测试''\\)\nprint\\(''='' * 50\\)\n\n# PPI\ntry:\n    ppi = collector.get_ppi_data\\(\\)\n    print\\(f''PPI: {len\\(ppi\\)} 条''\\)\nexcept Exception as e:\n    print\\(f''PPI: 失败 - {e}''\\)\n\n# 市场情绪\ntry:\n    sentiment = collector.get_market_sentiment_index\\(\\)\n    print\\(f''市场情绪: {len\\(sentiment\\)} 条''\\)\nexcept Exception as e:\n    print\\(f''市场情绪: 失败 - {e}''\\)\n\nprint\\(''\\\\n测试完成!''\\)\n\")",
+      "Bash(del \"C:\\\\Users\\\\yandeqiang\\\\Desktop\\\\个人项目\\\\金融量化\\\\test_multi_factor.py\")",
+      "Bash(python -c:*)",
+      "Bash(python3:*)"
     ]
   }
 }

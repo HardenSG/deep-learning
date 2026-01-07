@@ -38,41 +38,57 @@ class TechnicalIndicators:
     @staticmethod
     def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
         delta = df["close"].diff()
-        
+
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        
-        rs = gain / loss
+
+        # 避免除零
+        rs = gain / loss.replace(0, np.nan)
         df["rsi"] = 100 - (100 / (1 + rs))
-        
+
+        # 当loss为0时（只涨不跌），RSI应为100
+        # 当gain为0时（只跌不涨），RSI应为0
+        df.loc[loss == 0, "rsi"] = 100
+        df.loc[gain == 0, "rsi"] = 0
+
         return df
     
     @staticmethod
     def calculate_kdj(df: pd.DataFrame, period: int = 9) -> pd.DataFrame:
         low_min = df["low"].rolling(window=period).min()
         high_max = df["high"].rolling(window=period).max()
-        
-        rsv = (df["close"] - low_min) / (high_max - low_min) * 100
-        
+
+        # 避免除零（基金数据high=low时）
+        denominator = high_max - low_min
+        denominator = denominator.replace(0, np.nan)
+
+        rsv = (df["close"] - low_min) / denominator * 100
+        # 如果无法计算RSV（基金数据），用50填充
+        rsv = rsv.fillna(50)
+
         df["kdj_k"] = rsv.ewm(com=2, adjust=False).mean()
         df["kdj_d"] = df["kdj_k"].ewm(com=2, adjust=False).mean()
         df["kdj_j"] = 3 * df["kdj_k"] - 2 * df["kdj_d"]
-        
+
         return df
     
     @staticmethod
     def calculate_bollinger_bands(
-        df: pd.DataFrame, 
-        period: int = 20, 
+        df: pd.DataFrame,
+        period: int = 20,
         std_dev: float = 2.0
     ) -> pd.DataFrame:
         df["bb_middle"] = df["close"].rolling(window=period).mean()
         std = df["close"].rolling(window=period).std()
-        
+
         df["bb_upper"] = df["bb_middle"] + (std * std_dev)
         df["bb_lower"] = df["bb_middle"] - (std * std_dev)
-        df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_middle"]
-        
+
+        # 避免除零
+        bb_middle_safe = df["bb_middle"].replace(0, np.nan)
+        df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / bb_middle_safe
+        df["bb_width"] = df["bb_width"].fillna(0)
+
         return df
     
     @staticmethod
@@ -80,10 +96,14 @@ class TechnicalIndicators:
         high_low = df["high"] - df["low"]
         high_close = np.abs(df["high"] - df["close"].shift())
         low_close = np.abs(df["low"] - df["close"].shift())
-        
+
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         df["atr"] = true_range.rolling(window=period).mean()
-        
+
+        # 基金数据ATR可能为0，用收盘价的波动率代替
+        if (df["atr"] == 0).all() or df["atr"].isna().all():
+            df["atr"] = df["close"].rolling(window=period).std()
+
         return df
     
     @staticmethod
@@ -93,6 +113,12 @@ class TechnicalIndicators:
 
         向量化实现，性能提升100倍以上
         """
+        # 如果没有成交量数据（如基金），使用价格变化幅度代替
+        if (df["volume"] == 0).all():
+            # 用价格变化百分比的绝对值作为"虚拟成交量"
+            df["obv"] = df["close"].pct_change().fillna(0).cumsum() * 100
+            return df
+
         # 计算价格变化方向：1(上涨)、-1(下跌)、0(不变)
         price_change = df["close"].diff()
         direction = np.sign(price_change)
@@ -109,7 +135,14 @@ class TechnicalIndicators:
     @staticmethod
     def calculate_volume_ratio(df: pd.DataFrame, period: int = 5) -> pd.DataFrame:
         df["volume_ma"] = df["volume"].rolling(window=period).mean()
-        df["volume_ratio"] = df["volume"] / df["volume_ma"]
+
+        # 避免除零（基金数据volume=0）
+        if (df["volume_ma"] == 0).all():
+            df["volume_ratio"] = 1.0  # 基金无成交量，设为1
+        else:
+            df["volume_ratio"] = df["volume"] / df["volume_ma"].replace(0, np.nan)
+            df["volume_ratio"] = df["volume_ratio"].fillna(1.0)
+
         return df
     
     @staticmethod

@@ -27,7 +27,7 @@ data:
 features:
   # 时间窗口
   window_size: 5  # 使用过去5天的数据 (滑动窗口优化：3-5天)
-  
+
   # 技术指标参数
   technical_indicators:
     ma_periods: [5, 10, 20, 30, 60]
@@ -40,12 +40,80 @@ features:
     bollinger_period: 20
     bollinger_std: 2
     atr_period: 14
-  
+
   # 特征标准化
   normalization: "minmax"  # minmax 或 standard
-  
+
   # 是否使用平稳特征 (去除非平稳的价格数据，仅保留收益率和差分)
   use_stationary: true
+
+  # ============ 多因子配置 ============
+  # 是否启用多因子（资金流向、北向资金、舆情、宏观）
+  use_multi_factors: true
+
+  multi_factors:
+    # 资金流向因子
+    fund_flow:
+      enabled: true
+      features:
+        - main_net_inflow       # 主力净流入
+        - main_net_inflow_pct   # 主力净流入占比
+        - super_large_net_inflow # 超大单净流入
+        - large_net_inflow      # 大单净流入
+        - medium_net_inflow     # 中单净流入
+        - small_net_inflow      # 小单净流入(散户)
+
+    # 北向资金因子
+    north_flow:
+      enabled: true
+      features:
+        - north_net_buy         # 北向资金净买入
+        - north_flow_ma5        # 北向资金5日均值
+        - north_flow_sum10      # 北向资金10日累计
+
+    # 舆情情绪因子
+    sentiment:
+      enabled: true
+      features:
+        - sentiment_mean        # 新闻情绪均值
+        - sentiment_std         # 新闻情绪波动
+        - news_count            # 新闻数量(关注度)
+      # 情绪分析关键词权重(可扩展)
+      positive_words:
+        - 涨停
+        - 利好
+        - 增长
+        - 突破
+        - 回购
+      negative_words:
+        - 跌停
+        - 利空
+        - 亏损
+        - 减持
+        - 风险
+
+    # 宏观政策因子
+    macro:
+      enabled: true
+      features:
+        - lpr_1y                # 1年期LPR利率
+        - lpr_5y                # 5年期LPR利率
+        - cpi                   # CPI同比
+        - m2_yoy                # M2同比增速
+      # 宏观数据更新频率(月度数据需前向填充)
+      fill_method: "ffill"
+
+    # 衍生因子(自动计算)
+    derived:
+      enabled: true
+      features:
+        - main_flow_change      # 主力资金变化率
+        - main_flow_ma5         # 主力资金5日均值
+        - fund_flow_momentum    # 资金流向动量(主力-散户)
+        - north_flow_change     # 北向资金变化率
+        - sentiment_change      # 情绪变化
+        - sentiment_ma5         # 情绪5日均值
+        - fund_sentiment_score  # 资金情绪综合得分
 
 # 模型配置
 model:

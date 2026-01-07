@@ -34,19 +34,30 @@ class SimpleStrategy(BaseStrategy):
         self.buy_threshold = buy_threshold
         self.sell_threshold = sell_threshold
         self.max_position_pct = max_position_pct
-        
+
         logger.info(f"策略初始化: {self.name}, 买入阈值={buy_threshold}, 卖出阈值={sell_threshold}")
-    
+
     def generate_signals(
         self,
-        prediction: float,
+        predictions,
         positions: Dict,
         cash: float,
         portfolio_value: float
     ) -> Dict[str, Dict]:
         signals = {}
-        
+
         stock_code = "stock"
+
+        # 支持Series和float两种输入
+        if hasattr(predictions, 'get'):
+            prediction = predictions.get(stock_code, 0)
+        elif hasattr(predictions, '__getitem__') and not isinstance(predictions, (int, float)):
+            try:
+                prediction = predictions[stock_code] if stock_code in predictions.index else 0
+            except:
+                prediction = float(predictions) if not hasattr(predictions, '__len__') else 0
+        else:
+            prediction = float(predictions)
         
         if prediction > self.buy_threshold:
             max_amount = portfolio_value * self.max_position_pct
@@ -92,23 +103,34 @@ class TrendFollowingStrategy(BaseStrategy):
         self.take_profit = take_profit
         self.max_position_pct = max_position_pct
         self.position_sizing = position_sizing
-        
+
         logger.info(
             f"策略初始化: {self.name}, "
             f"买入阈值={buy_threshold}, 卖出阈值={sell_threshold}, "
             f"止损={stop_loss}, 止盈={take_profit}"
         )
-    
+
     def generate_signals(
         self,
-        prediction: float,
+        predictions,
         positions: Dict,
         cash: float,
         portfolio_value: float
     ) -> Dict[str, Dict]:
         signals = {}
-        
+
         stock_code = "stock"
+
+        # 支持Series和float两种输入
+        if hasattr(predictions, 'get'):
+            prediction = predictions.get(stock_code, 0)
+        elif hasattr(predictions, '__getitem__') and not isinstance(predictions, (int, float)):
+            try:
+                prediction = predictions[stock_code] if stock_code in predictions.index else 0
+            except:
+                prediction = float(predictions) if not hasattr(predictions, '__len__') else 0
+        else:
+            prediction = float(predictions)
         
         if stock_code in positions:
             position = positions[stock_code]

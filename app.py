@@ -64,7 +64,7 @@ page = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.info("""
 **平台功能**
-- 查询股票/ETF历史数据
+- 查询股票/ETF/基金历史数据
 - AI智能预测涨跌
 - 一键训练新模型
 - 策略回测分析
@@ -72,6 +72,7 @@ st.sidebar.info("""
 **支持类型**
 - ✅ A股股票
 - ✅ ETF基金
+- ✅ 普通基金
 
 **技术栈**
 - LSTM深度学习
@@ -83,13 +84,13 @@ st.sidebar.info("""
 
 # ==================== 页面1：股票/ETF查询 ====================
 if page == "🔍 股票/ETF查询":
-    st.title("🔍 股票/ETF数据查询")
-    st.markdown("查看股票/ETF历史数据、K线图和技术指标")
+    st.title("🔍 股票/ETF/基金数据查询")
+    st.markdown("查看股票/ETF/基金历史数据、K线图和技术指标")
 
     # 证券类型选择
     security_type = st.radio(
         "证券类型",
-        ["A股股票", "ETF基金"],
+        ["A股股票", "ETF基金", "普通基金"],
         horizontal=True,
         help="选择要查询的证券类型"
     )
@@ -100,9 +101,12 @@ if page == "🔍 股票/ETF查询":
         if security_type == "A股股票":
             default_code = "600519"
             help_text = "输入6位股票代码，如 600519（贵州茅台）"
-        else:
+        elif security_type == "ETF基金":
             default_code = "563530"
             help_text = "输入6位ETF代码，如 563530（中证800ETF）"
+        else:
+            default_code = "003494"
+            help_text = "输入6位基金代码，如 003494（富国天惠成长混合C）"
 
         stock_code = st.text_input(
             "证券代码",
@@ -198,13 +202,13 @@ if page == "🔍 股票/ETF查询":
 
 # ==================== 页面2：股票/ETF预测 ====================
 elif page == "🤖 股票/ETF预测":
-    st.title("🤖 AI股票/ETF预测")
+    st.title("🤖 AI股票/ETF/基金预测")
     st.markdown("基于LSTM深度学习模型的智能预测")
 
     # 证券类型选择
     security_type = st.radio(
         "证券类型",
-        ["A股股票", "ETF基金"],
+        ["A股股票", "ETF基金", "普通基金"],
         horizontal=True,
         help="选择要预测的证券类型"
     )
@@ -215,9 +219,12 @@ elif page == "🤖 股票/ETF预测":
         if security_type == "A股股票":
             default_code = "600519"
             help_text = "输入已训练过模型的股票代码"
-        else:
+        elif security_type == "ETF基金":
             default_code = "563530"
             help_text = "输入已训练过模型的ETF代码"
+        else:
+            default_code = "003494"
+            help_text = "输入已训练过模型的基金代码"
 
         stock_code = st.text_input(
             "证券代码",
@@ -409,11 +416,11 @@ elif page == "🤖 股票/ETF预测":
 # ==================== 页面3：模型训练 ====================
 elif page == "🏋️ 模型训练":
     st.title("🏋️ 模型训练")
-    st.markdown("训练新股票/ETF的AI预测模型")
+    st.markdown("训练新股票/ETF/基金的AI预测模型")
 
     st.info("""
 **训练说明**
-1. 选择证券类型（A股/ETF）
+1. 选择证券类型（A股/ETF/基金）
 2. 输入证券代码
 3. 系统会自动采集数据
 4. 自动计算技术指标
@@ -426,7 +433,7 @@ elif page == "🏋️ 模型训练":
     # 证券类型选择
     security_type = st.radio(
         "证券类型",
-        ["A股股票", "ETF基金"],
+        ["A股股票", "ETF基金", "普通基金"],
         horizontal=True,
         help="选择要训练的证券类型"
     )
@@ -437,9 +444,12 @@ elif page == "🏋️ 模型训练":
         if security_type == "A股股票":
             default_code = "000001"
             help_text = "输入6位股票代码"
-        else:
+        elif security_type == "ETF基金":
             default_code = "563530"
             help_text = "输入6位ETF代码"
+        else:
+            default_code = "003494"
+            help_text = "输入6位基金代码"
 
         stock_code = st.text_input(
             "证券代码",
@@ -497,7 +507,7 @@ elif page == "🏋️ 模型训练":
             status_text.text("📥 步骤 1/5: 采集数据...")
             progress_bar.progress(20)
 
-            sec_type_map = {"A股股票": "stock", "ETF基金": "etf"}
+            sec_type_map = {"A股股票": "stock", "ETF基金": "etf", "普通基金": "fund"}
             sec_type_code = sec_type_map[security_type]
 
             add_log(f"开始采集 {security_type} {stock_code} 的数据")
@@ -786,21 +796,25 @@ elif page == "📊 策略回测":
                         st.info(f"📊 加载了 {len(df)} 条历史数据")
                         
                         feature_builder = FeatureBuilder(config.features)
-                        
+
                         from src.models.lstm_model import LSTMModel
                         import torch
-                        
+
+                        # 加载checkpoint获取模型参数
+                        checkpoint = torch.load(str(model_path), map_location='cpu')
+                        model_info = checkpoint.get("model_info", {})
+
+                        # 使用保存的模型参数或默认值
                         model = LSTMModel(
-                            input_size=36,
-                            hidden_size=128,
-                            num_layers=2,
+                            input_size=model_info.get("input_size", 36),
+                            hidden_size=model_info.get("hidden_size", 128),
+                            num_layers=model_info.get("num_layers", 2),
                             dropout=0.2
                         )
-                        
-                        checkpoint = torch.load(str(model_path), map_location='cpu')
+
                         model.load_state_dict(checkpoint['model_state_dict'])
                         model.eval()
-                        
+
                         feature_builder.load_scaler(str(scaler_path))
                         
                         predictions = []

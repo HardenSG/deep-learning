@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 class UnifiedDataCollector:
     """
-    统一数据采集器 - 支持A股和ETF基金
+    统一数据采集器 - 支持A股、ETF基金和普通基金
 
     使用示例:
         collector = UnifiedDataCollector(db)
@@ -21,11 +21,14 @@ class UnifiedDataCollector:
 
         # 采集ETF
         collector.collect_data('563530', security_type='etf')
+
+        # 采集普通基金
+        collector.collect_data('003494', security_type='fund')
     """
 
     def __init__(self, database: Database):
         self.db = database
-        logger.info("统一数据采集器初始化完成（支持A股+ETF）")
+        logger.info("统一数据采集器初始化完成（支持A股+ETF+基金）")
 
     def get_stock_list(self) -> pd.DataFrame:
         """获取A股列表"""
@@ -56,6 +59,23 @@ class UnifiedDataCollector:
             return etf_info
         except Exception as e:
             logger.error(f"获取ETF列表失败: {e}")
+            return pd.DataFrame()
+
+    def get_fund_list(self) -> pd.DataFrame:
+        """获取普通基金列表"""
+        try:
+            logger.info("获取普通基金列表...")
+            fund_info = ak.fund_name_em()
+
+            # 标准化列名
+            fund_info = fund_info[['基金代码', '基金简称']].copy()
+            fund_info.columns = ["code", "name"]
+            fund_info['type'] = 'fund'
+
+            logger.info(f"获取到 {len(fund_info)} 只普通基金")
+            return fund_info
+        except Exception as e:
+            logger.error(f"获取基金列表失败: {e}")
             return pd.DataFrame()
 
     def get_all_securities_list(self) -> pd.DataFrame:
@@ -171,6 +191,107 @@ class UnifiedDataCollector:
             logger.error(f"获取ETF {etf_code} 数据失败: {e}")
             return pd.DataFrame()
 
+    def get_fund_daily_data(
+        self,
+        fund_code: str,
+        start_date: str,
+        end_date: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        获取普通基金净值数据
+
+        注意: 基金数据结构与股票不同，基金使用净值而非OHLCV
+        """
+        try:
+            logger.debug(f"获取基金 {fund_code} 的净值数据...")
+
+            # 获取基金单位净值走势
+            df = ak.fund_open_fund_info_em(
+                symbol=fund_code,
+                indicator="单位净值走势",
+                period="全部"
+            )
+
+            if df.empty:
+                logger.warning(f"未获取到基金 {fund_code} 的数据")
+                return df
+
+            # 基金数据格式: ['净值日期', '单位净值', '日增长率']
+            df['净值日期'] = pd.to_datetime(df['净值日期'])
+
+            # 过滤日期范围
+            if start_date:
+                start_dt = pd.to_datetime(start_date)
+                df = df[df['净值日期'] >= start_dt]
+
+            if end_date:
+                end_dt = pd.to_datetime(end_date)
+                df = df[df['净值日期'] <= end_dt]
+
+            # 转换为标准格式（与股票数据兼容）
+            # 基金没有OHLCV，将净值映射为close价格
+            df_standard = pd.DataFrame({
+                'trade_date': df['净值日期'],
+                'close': df['单位净值'].astype(float),
+                'open': df['单位净值'].astype(float),
+                'high': df['单位净值'].astype(float),
+                'low': df['单位净值'].astype(float),
+                'volume': 0,
+                'turnover': 0,
+                'change_pct': df['日增长率'].astype(float),
+                'change_amount': 0,
+                'amplitude': 0,
+                'turnover_rate': 0,
+                'stock_code': fund_code,
+                'security_type': 'fund'
+            })
+
+            logger.info(f"获取到基金 {fund_code} 的 {len(df_standard)} 条净值数据")
+            return df_standard
+
+        except Exception as e:
+            logger.error(f"获取基金 {fund_code} 数据失败: {e}")
+            return pd.DataFrame()
+
+    def auto_detect_security_type(self, code: str) -> str:
+        """
+        自动识别证券类型
+
+        规则:
+        1. 5/15开头 -> ETF
+        2. 6开头 -> 上海股票
+        3. 0/3开头 -> 需要进一步检查（可能是股票或基金）
+        """
+        # ETF判断
+        if code.startswith('5') or code.startswith('15'):
+            return 'etf'
+
+        # 上海股票判断
+        if code.startswith('6'):
+            return 'stock'
+
+        # 0/3开头可能是股票或基金，需要查询
+        if code.startswith('0') or code.startswith('3'):
+            try:
+                # 先检查是否在股票列表中
+                stock_list = ak.stock_info_a_code_name()
+                if code in stock_list['code'].values:
+                    return 'stock'
+
+                # 再检查是否在基金列表中
+                fund_list = ak.fund_name_em()
+                if code in fund_list['基金代码'].values:
+                    return 'fund'
+
+                # 都不在，默认为股票
+                return 'stock'
+            except Exception as e:
+                logger.warning(f"自动识别类型时出错: {e}，默认为股票")
+                return 'stock'
+
+        # 其他情况，尝试基金
+        return 'fund'
+
     def get_daily_data(
         self,
         code: str,
@@ -185,21 +306,18 @@ class UnifiedDataCollector:
             code: 证券代码
             start_date: 开始日期
             end_date: 结束日期
-            security_type: 'stock', 'etf', 或 'auto'（自动识别）
+            security_type: 'stock', 'etf', 'fund', 或 'auto'（自动识别）
 
         Returns:
             DataFrame: 标准化的日线数据
         """
         if security_type == 'auto':
-            # 自动识别类型
-            if code.startswith('5') or code.startswith('15'):
-                security_type = 'etf'
-                logger.info(f"自动识别 {code} 为ETF基金")
-            else:
-                security_type = 'stock'
-                logger.info(f"自动识别 {code} 为A股")
+            security_type = self.auto_detect_security_type(code)
+            logger.info(f"自动识别 {code} 为 {security_type}")
 
-        if security_type == 'etf':
+        if security_type == 'fund':
+            return self.get_fund_daily_data(code, start_date, end_date)
+        elif security_type == 'etf':
             return self.get_etf_daily_data(code, start_date, end_date)
         else:
             return self.get_stock_daily_data(code, start_date, end_date)
